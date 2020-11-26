@@ -1,5 +1,4 @@
 # Ambar
-### _Victor Anyakin <anyakinvictor@yahoo.com>_
 
 A primitive file server with a very simple Web UI meant to run in a
 local network and serve files from a Raspberry Pi (or any other

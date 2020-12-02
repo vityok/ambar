@@ -9,16 +9,9 @@
 
 (defparameter *Download* "/Download/")
 
-(defparameter *static* "static/")
+(defparameter *static* (asdf:system-relative-pathname 'ambar "static/"))
 
 (setf (cl-who:html-mode) :html5)
-
-(setf hunchentoot:*dispatch-table*
-      `(hunchentoot:dispatch-easy-handlers
-        ,(hunchentoot:create-folder-dispatcher-and-handler
-	  *Download* *root*)
-	,(hunchentoot:create-folder-dispatcher-and-handler
-	  "/static/" *static*)))
 
 (defmacro with-html-page (&rest body)
   "Basic template for a general-purpose Web page."
@@ -57,7 +50,7 @@
 
 (defun make-download-button (file-name)
   (cl-who:with-html-output-to-string (out nil :indent t)
-    (:a :class "btn btn-primary" :href (format nil "~a~a" *Download* file-name)
+    (:a :class "btn btn-primary" :href (format nil "~a~a" *Download* (quri:url-encode file-name))
 	(:svg :class "bi" :width "19" :height "19" :fill "currentColor"
 	      (:use :|xlink:href| "/static/icons/bootstrap-icons.svg#download")))))
 
@@ -114,8 +107,11 @@
 			 (:tr
 			  (:th :scope "col" "Name")))
 			(:tbody
-			 (dolist (entry (cl-fad:list-directory
-					 (cl-fad:merge-pathnames-as-directory *root* dir-name)))
+			 (dolist (entry (sort (cl-fad:list-directory
+					       (cl-fad:merge-pathnames-as-directory *root* dir-name))
+					      #'(lambda (a b)
+						  (string-lessp (namestring a)
+								(namestring b)))))
 			   (if (cl-fad:directory-pathname-p entry)
 			       ;; directory
 			       (let ((name (car (last (pathname-directory entry))))
@@ -139,5 +135,16 @@
 
 (defun run (&optional (root-dir #p"/home/pi/Downloads/"))
   (setf *root* root-dir)
+  (format t "root directory: ~a" *root*)
+
+
+  (setf hunchentoot:*dispatch-table*
+	`(hunchentoot:dispatch-easy-handlers
+	  ;; /Download/ will serve files in the *root* directory
+          ,(hunchentoot:create-folder-dispatcher-and-handler
+	    *Download* *root*)
+	  ,(hunchentoot:create-folder-dispatcher-and-handler
+	    "/static/" *static*)))
+
   (hunchentoot:start (make-instance 'hunchentoot:easy-acceptor
 				    :port 4242)))
